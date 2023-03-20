@@ -81,7 +81,7 @@ def get_next_file(file, path):
 def summarise_slide(path, of_interest = 'diffusion_coefficients', zoom=3, 
                     frac=0.2, savename=None,out_time = None):
     if type(of_interest)==str:
-        pass
+        of_interest = [of_interest]
     files = glob.glob(path+"*.h5")
     files = sort_byfilenr(files)
     try:
@@ -97,7 +97,7 @@ def summarise_slide(path, of_interest = 'diffusion_coefficients', zoom=3,
         next_filename = next_images[j]
         ax0 = fig.add_subplot(2,len(next_images),j+1)
         try:
-            ax0.set_title(os.path.split(next_filename)[-1])
+            ax0.set_title(os.path.split(next_filename)[-1].rstrip('.czi'))
             img = czifile.imread(next_filename).squeeze()
             u,v=img.shape
             nnu = (u-u//zoom)//2
@@ -106,30 +106,33 @@ def summarise_slide(path, of_interest = 'diffusion_coefficients', zoom=3,
             ampl = img.max()-img.min()
             ax0.imshow(img,cmap="gray",vmin=img.min()+ampl*frac,
                        vmax=img.max()-ampl*frac)
+            ax0.axis('off')
         except Exception as e:
             print(e)
             pass
     
-    times, vals = extract_timeseries(files,out_time,
-                                     of_interest=of_interest)
-    
-    vmeans = [np.mean(w) for w in vals]
-    vstd = [np.std(w) for w in vals]
-    
-    ax1 = fig.add_subplot(2,1,2)
-    ax1.errorbar(times,vmeans,yerr=vstd,marker="o",capsize=5)
-    ax1.set_xlabel('Time (min)')
-    ax1.set_ylabel(of_interest)
-    fig.tight_layout()
+    for j,oi in enumerate(of_interest):
+        times, vals = extract_timeseries(files,out_time,
+                                         of_interest=oi)
+        
+        vmeans = [np.mean(w) for w in vals]
+        vstd = [np.std(w) for w in vals]
+        
+        ax1 = fig.add_subplot(2,len(of_interest),len(of_interest)+j+1)
+        ax1.errorbar(times,vmeans,yerr=vstd,marker="o",capsize=5)
+        ax1.set_xlabel('Time (min)')
+        ax1.set_ylabel(oi)
+    # fig.tight_layout()
     if savename is not None:
-        fig.savefig(savename+"_"+of_interest+".png")
+        fig.savefig(savename+"_"+".png")
     
 def tl_multiple_exp(folders, labels = None,colors = None,
                     of_interest="diffusion_coefficients"):
     if labels is None:
         labels = [w.split('/')[-2] for w in folders]
-    
+
     fig,ax = plt.subplots(1,1)
+    
     for j, path in enumerate(folders):
         files = glob.glob(path+"*.h5")
         
@@ -139,7 +142,7 @@ def tl_multiple_exp(folders, labels = None,colors = None,
                 aa= f.read()
             out_time=aa[:8]
         except:
-            pass
+            out_time=None
         times, vals = extract_timeseries(files,out_time,
                                          of_interest=of_interest)
         
