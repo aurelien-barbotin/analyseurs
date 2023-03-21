@@ -50,15 +50,22 @@ def extract_timeseries(files, out_time, nsum=3,
         all_of_interest.append(values_of_interest)
         
     all_times = np.array(all_times)
+    order = np.arange(len(all_times))
     all_of_interest = [y for x,y in sorted(zip(all_times,all_of_interest))]
+    order = [y for x,y in sorted(zip(all_times,order))]
     all_times = sorted(all_times)
-    return all_times, all_of_interest
+    return all_times, all_of_interest, order
 
 def get_filenr(file):
     file_nr = file.split("Image ")[-1].split('_')[0].split('.')[0]
     return int(file_nr)
 
 def sort_byfilenr(files):
+    print(files)
+    files_nrs = [get_filenr(f) for f in files]
+    return [y for x,y in sorted(zip(files_nrs,files))]
+
+def sort_byacqtime(files):
     print(files)
     files_nrs = [get_filenr(f) for f in files]
     return [y for x,y in sorted(zip(files_nrs,files))]
@@ -93,8 +100,21 @@ def summarise_slide(path, of_interest = 'diffusion_coefficients', zoom=3,
     next_images = [get_next_file(w,path) for w in files]
   
     fig = plt.figure(figsize=(10,4))
+    # plots the different quantities
+    for j,oi in enumerate(of_interest):
+        times, vals, order = extract_timeseries(files,out_time,
+                                         of_interest=oi)
+        
+        vmeans = [np.mean(w) for w in vals]
+        vstd = [np.std(w) for w in vals]
+        
+        ax1 = fig.add_subplot(2,len(of_interest),len(of_interest)+j+1)
+        ax1.errorbar(times,vmeans,yerr=vstd,marker="o",capsize=5)
+        ax1.set_xlabel('Time (min)')
+        ax1.set_ylabel(oi)
+    # plots images
     for j in range(len(next_images)):
-        next_filename = next_images[j]
+        next_filename = next_images[order[j]]
         ax0 = fig.add_subplot(2,len(next_images),j+1)
         try:
             ax0.set_title(os.path.split(next_filename)[-1].rstrip('.czi'))
@@ -111,17 +131,6 @@ def summarise_slide(path, of_interest = 'diffusion_coefficients', zoom=3,
             print(e)
             pass
     
-    for j,oi in enumerate(of_interest):
-        times, vals = extract_timeseries(files,out_time,
-                                         of_interest=oi)
-        
-        vmeans = [np.mean(w) for w in vals]
-        vstd = [np.std(w) for w in vals]
-        
-        ax1 = fig.add_subplot(2,len(of_interest),len(of_interest)+j+1)
-        ax1.errorbar(times,vmeans,yerr=vstd,marker="o",capsize=5)
-        ax1.set_xlabel('Time (min)')
-        ax1.set_ylabel(oi)
     # fig.tight_layout()
     if savename is not None:
         fig.savefig(savename+"_"+".png")
