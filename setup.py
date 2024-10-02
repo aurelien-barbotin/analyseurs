@@ -4,7 +4,6 @@ import os
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
-
 thelibFolder = os.path.dirname(os.path.realpath(__file__))
 
 requirementPath = thelibFolder + '/lib/requirements.txt'
